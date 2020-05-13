@@ -36,11 +36,11 @@ class Papi extends EventEmitter {
       .on("error", (err) => handleStreamError(err, this.title_stream.path));
 
     films.forEach((film) => {
-      title_stream.write(`${film.title}\n`);
-      lnks_stream.write(`${film.link}\n`);
+      this.title_stream.write(`${film.title}\n`);
+      this.lnks_stream.write(`${film.link}\n`);
     });
-    lnks_stream.end();
-    title_stream.end();
+    this.lnks_stream.end();
+    this.title_stream.end();
   }
 
   setCategories(...data) {
