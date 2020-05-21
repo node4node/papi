@@ -21,4 +21,3 @@ const papi = new Papi();
 papi.setCategories(50, 51, 52);
 papi
   .poll()
-  .catch(console.error);
