@@ -15,10 +15,10 @@ class Papi extends EventEmitter {
 
   save(films) {
     console.log("Saving to files...");
-    const dataDirPath = path.join(__dirname, "../data")
-    fs.mkdirSync(dataDirPath,{recursive : true})
-    const lnks_path = path.join(dataDirPath, "lnks.txt")
-    const titles_path = path.join(dataDirPath, "movies.txt")
+    const dataDirPath = path.join(__dirname, "../data");
+    fs.mkdirSync(dataDirPath, { recursive: true });
+    const lnks_path = path.join(dataDirPath, "lnks.txt");
+    const titles_path = path.join(dataDirPath, "movies.txt");
     this.lnks_stream = fs.createWriteStream(lnks_path, { flags: "a" });
     this.title_stream = fs.createWriteStream(titles_path, { flags: "a" });
 
@@ -36,7 +36,7 @@ class Papi extends EventEmitter {
       .on("error", (err) => handleStreamError(err, this.title_stream.path));
 
     films.forEach((film) => {
-      this.title_stream.write(`${film.title}\n`);
+      this.title_stream.write(`${this._extractMovieTitle(film)}\n`);
       this.lnks_stream.write(`${film.link}\n`);
     });
     this.lnks_stream.end();
@@ -71,10 +71,22 @@ class Papi extends EventEmitter {
     }
   }
 
+  _extractMovieTitle(film) {
+    const titleRegex = /^(?<Name>.+?)(?!\.[12]\d\d\d\.\d{,3}[ip]\.)\.(?<Year>\d\d\d\d)\.(?<Resolution>[^.]+)\.(?<Format>[^.]+)/;
+    const {
+      groups: { Name: name },
+    } = titleRegex.exec(film.title);
+    const title = name.split(".").join(" ");
+    return title;
+  }
+
   getOnlyNewFilms(films) {
     return new Promise((resolve, reject) => {
       try {
-        const existingMoviesPath = path.resolve(__dirname, "../data/movies.txt");
+        const existingMoviesPath = path.resolve(
+          __dirname,
+          "../data/movies.txt"
+        );
         const stream = fs.createReadStream(existingMoviesPath, {
           encoding: "utf8",
         });
@@ -92,12 +104,13 @@ class Papi extends EventEmitter {
           input: stream,
         });
 
-        rl.on("line", (lnk) => {
-          const index = films.findIndex(({ title }) => {
-            return lnk == title;
+        rl.on("line", (title) => {
+          const index = films.findIndex((film) => {
+            const _title = this._extractMovieTitle(film);
+            return _title === title;
           });
           if (index !== -1) {
-            console.log(`Already have "${films[index].title}". Removing...`);
+            console.log(`Already have "${title}". Removing...`);
             films.splice(index, 1);
           }
         });
@@ -119,7 +132,7 @@ class Papi extends EventEmitter {
     const items = this.feed.items;
     for (let index = 0; index < items.length; index++) {
       const item = items[index];
-      const key = item.title.substring(0, 10);
+      const key = this._extractMovieTitle(item);
 
       item_map.hasOwnProperty(key)
         ? item_map[key].push(item)
