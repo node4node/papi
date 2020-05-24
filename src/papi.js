@@ -11,6 +11,7 @@ class Papi extends EventEmitter {
     this.baseURL = "https://rarbg.to/rssdd_magnet.php?categories=";
     this.parser = new Parser();
     this.feed = null;
+    this.last_checked = null;
   }
 
   save(films) {
@@ -127,6 +128,9 @@ class Papi extends EventEmitter {
   }
 
   async processFeed() {
+    if (!this.feed) {
+      return [];
+    }
     const item_map = {};
     let processed = [];
     const items = this.feed.items;
@@ -185,11 +189,22 @@ class Papi extends EventEmitter {
     try {
       const feedURL = `${this.baseURL}${this.categories.join(";")}`;
       this.feed = await this.parser.parseURL(feedURL);
+      this.last_checked = Date.now();
+      this.parser = new Parser({
+        headers: {
+          "If-Modified-Since": new Date(this.last_checked).toUTCString(),
+        },
+      });
       this.emit("feed", this.feed);
       return this;
     } catch (e) {
-      console.error(`Error checking feed: ${inspect(e)}`);
-      throw e;
+      this.feed = null;
+      if (e.message === "Status code 304") {
+        console.log("Nothing new to grab from feed...");
+      } else {
+        console.error(`Error checking feed: ${inspect(e)}`);
+        throw e;
+      }
     }
   }
 }
